@@ -49,7 +49,10 @@ export default function MusicPlayer({ playerId, roomId, isHost }: MusicPlayerPro
       ? window.location.origin
       : 'http://localhost:3000';
     
-    socketRef.current = io(socketUrl);
+    socketRef.current = io(socketUrl, {
+      path: '/api/socket',
+      addTrailingSlash: false
+    });
 
     // Join room
     socketRef.current.emit('joinRoom', { roomId, playerId });
