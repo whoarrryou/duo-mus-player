@@ -1,4 +1,14 @@
 import { Server as SocketIOServer } from 'socket.io';
+import type { Server as HTTPServer } from 'http';
+import type { Socket as NetSocket } from 'net';
+
+interface SocketServer extends HTTPServer {
+  io?: SocketIOServer;
+}
+
+interface SocketWithIO extends NetSocket {
+  server: SocketServer;
+}
 
 let io: SocketIOServer;
 
@@ -10,7 +20,10 @@ export function getIO() {
         methods: ["GET", "POST"]
       },
       path: '/api/socket',
-      addTrailingSlash: false
+      addTrailingSlash: false,
+      transports: ['websocket', 'polling'],
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
 
     io.on('connection', (socket) => {
@@ -37,6 +50,15 @@ export function getIO() {
       socket.on('disconnect', () => {
         console.log('Client disconnected');
       });
+
+      socket.on('error', (error) => {
+        console.error('Socket error:', error);
+      });
+    });
+
+    // Handle server errors
+    io.engine.on('connection_error', (error) => {
+      console.error('Connection error:', error);
     });
   }
 
