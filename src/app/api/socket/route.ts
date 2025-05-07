@@ -1,48 +1,9 @@
-import { Server } from 'socket.io';
 import { NextResponse } from 'next/server';
+import { getIO } from '@/lib/socket';
 
-let io: Server;
-
-const ioHandler = (req: Request) => {
+export async function GET() {
   try {
-    if (!io) {
-      console.log('Initializing Socket.IO server...');
-      io = new Server({
-        cors: {
-          origin: "*",
-          methods: ["GET", "POST"]
-        },
-        path: '/api/socket',
-        addTrailingSlash: false
-      });
-
-      io.on('connection', (socket) => {
-        console.log('Client connected');
-
-        socket.on('joinRoom', ({ roomId, playerId }) => {
-          // Leave any existing rooms
-          socket.rooms.forEach(room => {
-            if (room !== socket.id) {
-              socket.leave(room);
-            }
-          });
-
-          // Join the new room
-          socket.join(roomId);
-          console.log(`Player ${playerId} joined room ${roomId}`);
-        });
-
-        socket.on('playerState', (data) => {
-          // Broadcast player state to other players in the room
-          socket.to(data.roomId).emit('playerState', data);
-        });
-
-        socket.on('disconnect', () => {
-          console.log('Client disconnected');
-        });
-      });
-    }
-
+    const io = getIO();
     return new NextResponse('Socket.IO server is running', {
       status: 200,
       headers: {
@@ -55,7 +16,8 @@ const ioHandler = (req: Request) => {
     console.error('Socket.IO server error:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
-};
+}
 
-export const GET = ioHandler;
-export const POST = ioHandler; 
+export async function POST() {
+  return GET();
+} 
