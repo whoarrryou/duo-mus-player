@@ -49,27 +49,47 @@ export default function MusicPlayer({ playerId, roomId, isHost }: MusicPlayerPro
       ? window.location.origin
       : 'http://localhost:3000';
     
-    socketRef.current = io(socketUrl, {
-      path: '/api/socket',
-      addTrailingSlash: false
-    });
+    const connectSocket = () => {
+      socketRef.current = io(socketUrl, {
+        path: '/api/socket',
+        addTrailingSlash: false,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000
+      });
 
-    // Join room
-    socketRef.current.emit('joinRoom', { roomId, playerId });
+      socketRef.current.on('connect', () => {
+        console.log('Connected to socket server');
+        // Join room after successful connection
+        socketRef.current?.emit('joinRoom', { roomId, playerId });
+      });
 
-    // Only listen to other player's state updates
-    socketRef.current.on('playerState', (data) => {
-      if (data.playerId !== playerId && data.roomId === roomId) {
-        setOtherPlayerState({
-          currentSong: data.currentSong,
-          isPlaying: data.isPlaying,
-          progress: data.progress
-        });
-      }
-    });
+      socketRef.current.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+      });
+
+      socketRef.current.on('disconnect', (reason) => {
+        console.log('Disconnected from socket server:', reason);
+      });
+
+      // Only listen to other player's state updates
+      socketRef.current.on('playerState', (data) => {
+        if (data.playerId !== playerId && data.roomId === roomId) {
+          setOtherPlayerState({
+            currentSong: data.currentSong,
+            isPlaying: data.isPlaying,
+            progress: data.progress
+          });
+        }
+      });
+    };
+
+    connectSocket();
 
     return () => {
-      socketRef.current?.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, [playerId, roomId]);
 
